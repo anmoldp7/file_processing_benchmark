@@ -1,0 +1,11 @@
+-module(file_processing_benchmark_app).
+-behaviour(application).
+
+-export([start/2]).
+-export([stop/1]).
+
+start(_Type, _Args) ->
+	file_processing_benchmark_sup:start_link().
+
+stop(_State) ->
+	ok.
