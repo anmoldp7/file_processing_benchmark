@@ -52,6 +52,7 @@ get_message() ->
 
 %% @doc send request to start async processes
 start_processes() ->
+	ensure_process_availability(),
 	gen_server:cast({global, ?MODULE}, start_processes).
 
 %% @doc send request to stop transmission
@@ -59,13 +60,34 @@ stop_transmission() ->
 	gen_server:call({global, ?MODULE}, stop_transmission).
 
 %%%===================================================================
-%%% internal function
+%%% internal functions
 %%%===================================================================
 
 %% @doc start async processes
 start_async_processes() ->
 	{ok, NumberOfProcesses} = application:get_env(?SERVER, number_of_processes),
 	lists:foreach(fun(Num) -> file_async_processor:start(Num) end, lists:seq(1, NumberOfProcesses)).
+
+%% @doc ensure stray async processes close ultimately
+ensure_process_availability() ->
+	{ok, NumberOfProcesses} = application:get_env(?SERVER, number_of_processes),
+	FreeProcessFunc =
+		fun(Num) ->
+			case gproc:lookup_local_name({file_async_processor, Num}) of
+				undefined ->
+					true;
+				_Pid ->
+					false
+			end
+		end,
+	ProcessValidation = [FreeProcessFunc(Num) || Num <- lists:seq(1, NumberOfProcesses)],
+	case lists:member(false, ProcessValidation) of
+		true ->
+			timer:sleep(1000),
+			ensure_process_availability();
+		false ->
+			ok
+	end.
 
 %%%===================================================================
 %%% gen_server callbacks

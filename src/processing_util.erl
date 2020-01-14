@@ -17,10 +17,11 @@
 %%% API
 %%%===================================================================
 
-%% @doc process text
+%% @doc text processing done at process level
 process_text(Data) ->
-	lager:info("Data: ~p", [Data]),
-	lager:info("Tokens: ~p", [string:tokens(binary_to_list(Data), " ")]).
+	% uncomment below line to show data
+	% lager:info("Data: ~p", [Data]),
+	lager:info("Number of Tokens: ~p", [erlang:length(string:tokens(binary_to_list(Data)), " ")]).
 
 %% @doc asynchronous processing
 process_file_async() ->

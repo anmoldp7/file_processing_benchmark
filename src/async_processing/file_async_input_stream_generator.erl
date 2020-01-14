@@ -47,20 +47,20 @@ transmit_input_stream() ->
 	{ok, ChunkSize} = application:get_env(?SERVER, block_size),
 	{ok, InputFilePath} = application:get_env(?SERVER, input_file_path),
 	{ok, Data} = file:read_file(InputFilePath),
-	MessageChunks = chunk_file_data(Data, ChunkSize),
 	file_async_message_queue:start_processes(),
-	lists:foreach(fun(Chunk) -> file_async_message_queue:send_message(Chunk) end, MessageChunks),
+	transmit_chunks(Data, ChunkSize),
 	file_async_message_queue:stop_transmission().
 
-%% @doc generate chunks
-chunk_file_data(Data, ChunkSize) ->
+%% @doc transmit chunks of data
+transmit_chunks(Data, ChunkSize) ->
 	BodyLength = string:length(Data),
 	if
 		BodyLength =< ChunkSize ->
-			[Data];
+			file_async_message_queue:send_message(Data);
 		BodyLength > ChunkSize ->
 			<<Head:ChunkSize/binary, Tail/binary>> = Data,
-			[Head | chunk_file_data(Tail, ChunkSize)]
+			file_async_message_queue:send_message(Head),
+			transmit_chunks(Tail, ChunkSize)
 	end.
 
 %%%===================================================================

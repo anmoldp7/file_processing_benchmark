@@ -52,11 +52,36 @@ process_data(Id, Data) ->
 	StartTime = erlang:monotonic_time(),
 	processing_util:process_text(Data),
 	TimeTaken = erlang:convert_time_unit(erlang:monotonic_time() - StartTime, native, nanosecond),
-	lager:info("Time taken: ~p, process ID: ~p, size of data: ~p", [TimeTaken, Id, string:length(Data)]).
+	lager:info("Time taken: ~p nanoseconds, process ID: ~p, size of data: ~p", [TimeTaken, Id, string:length(Data)]).
 
 %% @doc fetch data from message queue
 fetch_data_from_queue() ->
 	gen_server:cast(self(), fetch_data_from_queue).
+
+%% @doc bind process to name
+register_self(Name, Options) ->
+	Self = self(),
+	case gproc:lookup_local_name(Name) of
+		undefined ->
+			try
+				gproc:add_local_name(Name)
+			catch
+				error:badarg->
+					lager:debug("gproc register failed for ~p", [Name]),
+					register_self(Name, Options)
+			end;
+		Self ->
+			true;
+		Pid ->
+			case lists:member(kill_existing, Options) of
+				true ->
+					exit(Pid, "Registered name clash"),
+					timer:sleep(3000),
+					register_self(Name, Options);
+				false ->
+					{error, Pid}
+			end
+	end.
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -65,6 +90,7 @@ fetch_data_from_queue() ->
 %% @private
 %% @doc initializes the server
 init([Id]) ->
+	register_self({?MODULE, Id}, []),
 	fetch_data_from_queue(),
 	lager:info("Async file processor initialized: ~p", [Id]),
 	{ok, #state{message = <<"">>, id_no = Id}}.
