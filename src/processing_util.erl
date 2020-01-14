@@ -21,7 +21,7 @@
 process_text(Data) ->
 	% uncomment below line to show data
 	% lager:info("Data: ~p", [Data]),
-	lager:info("Number of Tokens: ~p", [erlang:length(string:tokens(binary_to_list(Data)), " ")]).
+	lager:info("Number of Tokens: ~p", [erlang:length(string:tokens(binary_to_list(Data), " "))]).
 
 %% @doc asynchronous processing
 process_file_async() ->
